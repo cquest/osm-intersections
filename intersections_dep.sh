@@ -9,18 +9,17 @@ rm -f intersections-$DEP.json
     # recherche des communes du département
     for COM in $(psql osm -tA -c "select insee from osm_cog where insee like '$DEP%' and admin_level='8' order by 1")
     do
+        # export features geojson
         psql osm -tA -c "
-            select row_to_json(i) from (
+            select ST_AsGeojson(i) from (
                 select
-                    'inter' as type,
                     name, context, citycode, depcode,
-                    round(st_x(geom)::numeric,6) as lon,
-                    round(st_y(geom)::numeric,6) as lat
+                    geom
                 from (
                     select
-                        trim(format('%s %s',coalesce(l.name,''),coalesce(replace(l.ref,' ',''))))
+                        max(trim(format('%s %s',coalesce(l.name,''),coalesce(replace(l.ref,' ',''))))
                         ||' / '||
-                        trim(format('%s %s',coalesce(l2.name,''),coalesce(replace(l2.ref,' ','')))) as name,
+                        trim(format('%s %s',coalesce(l2.name,''),coalesce(replace(l2.ref,' ',''))))) as name,
                         format(E'%s, $DEP_NAME',p.name) as context,
                         '$COM' as citycode,
                         '$DEP' as depcode,
@@ -37,12 +36,19 @@ rm -f intersections-$DEP.json
                         and (l.name is not null or l.ref is not null)
                         and l2.highway is not null
                         and (l2.name is not null or l2.ref is not null)
-                        and (l2.name != l.name or l2.ref != l.ref)
+                        and (lower(unaccent(l2.name)) != lower(unaccent(l.name)) or l2.ref != l.ref)
                         and l.osm_id < l2.osm_id
-                    group by 1,2,3,4
+                    group by lower(unaccent(l.name)), lower(unaccent(l2.name)),2,3,4
                 ) as i
             ) as i;
-        " >> intersections-$DEP.json
+        " >> intersections-$DEP.tmp
     done
+
+# création de la FeatureCollection
+cat intersections-$DEP.tmp | jq -c -s '{type: "FeatureCollection", features: .}' | gzip -9 > intersections-$DEP.geojson.gz
+# conversion au format json streamé attendu par addok
+cat intersections-$DEP.tmp | jq -c '.properties + {lon: .geometry.coordinates[0], lat: .geometry.coordinates[1]}' > intersections-$DEP.json
+rm -f intersections-$DEP.tmp
+
 echo "$DEP $DEP_NAME: $(wc -l intersections-$DEP.json)"
 
