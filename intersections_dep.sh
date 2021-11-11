@@ -5,7 +5,7 @@ DEP=$1
 # export intersection noms de rues / routes d'un département
 
 rm -f intersections-$DEP.json
-    DEP_NAME=$(psql osm -tA -c "select replace(name,E'\x27','\x27') from osm_cog where insee='$DEP' and admin_level='6'")
+    DEP_NAME=$(psql osm -tA -c "select replace(name,E'\x27','\x27') from osm_cog where insee='$DEP' and admin_level='6' limit 1")
     # recherche des communes du département
     for COM in $(psql osm -tA -c "select insee from osm_cog where insee like '$DEP%' and admin_level='8' order by 1")
     do
