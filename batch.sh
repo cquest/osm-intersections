@@ -9,7 +9,7 @@ INSERT INTO osm_cog SELECT 'Rhône', '69', '6', ST_UnaryUnion(ST_Collect(way)) F
 CREATE INDEX IF NOT EXISTS osm_cog_insee ON osm_cog (admin_level,insee);
 CREATE INDEX IF NOT EXISTS osm_cog_geom ON osm_cog USING GIST (way);
 "
-psql osm -tA -c "select insee from osm_cog where admin_level='6' order by 1" | parallel ./intersections_dep.sh {}
+psql osm -tA -c "select insee from osm_cog where admin_level='6' group by 1 order by 1" | parallel ./intersections_dep.sh {}
 
 cat intersections-*.json | gzip -9 > intersections.json.gz
 rm *.json
