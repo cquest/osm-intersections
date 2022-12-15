@@ -31,10 +31,10 @@ rm -f intersections-$DEP.json
                     join
                         planet_osm_line l2 on (l2.way && p.way and st_dwithin(l.way, l2.way, 20))
                     where
-                        p.insee = '$COM' and p.admin_level='8' 
-                        and l.highway is not null
+                        p.insee = '$COM' and p.admin_level='8'
+                        and (l.highway is not null or l.waterway is not null)
                         and (l.name is not null or l.ref is not null)
-                        and l2.highway is not null
+                        and (l2.highway is not null or l2.waterway is not null)
                         and (l2.name is not null or l2.ref is not null)
                         and (lower(unaccent(l2.name)) != lower(unaccent(l.name)) or l2.ref != l.ref)
                         and l.osm_id < l2.osm_id
